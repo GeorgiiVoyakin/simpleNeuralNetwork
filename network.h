@@ -32,6 +32,7 @@ class network {
     static double sigmoid(double x);
     //Производная сигмоидной функции
     static double derived_sigmoid(double x);
+    static double special_derived_sigmoid(double x);
 
     void setWeights();
 

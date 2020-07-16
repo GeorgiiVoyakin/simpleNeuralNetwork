@@ -17,6 +17,10 @@ double network::derived_sigmoid(double x) {
     return sigmoid(x) * (1 - sigmoid(x));
 }
 
+double network::special_derived_sigmoid(double x) {
+    return x * (1 - x);
+}
+
 network::network(vector<vector<double>>& input, string desktopPath) {
     this->desktopPath = desktopPath;
     //Заполнение входного слоя
@@ -26,7 +30,7 @@ network::network(vector<vector<double>>& input, string desktopPath) {
         }
     }
     //Установка размеров для всех векторов
-    hidden1.resize(200);
+    hidden1.resize(16);
     hidden2.resize(16);
     output.resize(10);
     biasesOfHidden1.resize(hidden1.size());
@@ -71,7 +75,7 @@ network::network(vector<vector<double>>& input, string desktopPath) {
             digits.push_back(buffer_image);
         }
         auto start = chrono::high_resolution_clock::now();
-        for (int epoch = 0; epoch < 1; epoch++) {
+        for (int epoch = 0; epoch < 2; epoch++) {
             for (int i = 0; i < 60000; i++) {
                 createInput(digits[i]);
                 feedForward();
@@ -79,12 +83,6 @@ network::network(vector<vector<double>>& input, string desktopPath) {
                 target.resize(output.size());
                 target[labels[i]] = 1.0;
                 backpropagation(output, target);
-                int counter = 0;
-                /*while (max_output() != labels[i]) {
-                    backpropagation(output, target);
-                    counter++;
-                    if (counter > 10) break;
-                }*/
                       
                 if (i % 100 == 0)
                     cout << epoch << " " << i << endl;
@@ -92,11 +90,20 @@ network::network(vector<vector<double>>& input, string desktopPath) {
         }
         auto stop = chrono::high_resolution_clock::now();
         cout << "Time in seconds: " << chrono::duration<double, ratio<1>>(stop - start).count() << endl;
-        createInput(digits[0]);
-        feedForward();
-        makeDecision();
+        
     }
-
+    
+    vector<Image> digits;
+    Image buffer_image;
+    for (int i = 0; i < 60000; i++) {
+        if (!buffer_image.loadFromFile(desktopPath + "\\network_data\\" + to_string(i) + ".png"))
+            cout << "Error. Не удалось загрузить картинку с цифрой.";
+        digits.push_back(buffer_image);
+    }
+    createInput(digits[0]);
+    feedForward();
+    makeDecision();
+    
     if (!(load && !sure)) {
         cout << "Сохранить веса ? (1/0)" << endl;
         bool save;
@@ -286,7 +293,7 @@ void network::backpropagation(vector<double> input_array, vector<double> target_
     // Calculate gradient
     vector<double> gradients;
     for (int i = 0; i < output.size(); i++)
-        gradients.push_back(learningRate * output_errors[i] * derived_sigmoid(output[i]));
+        gradients.push_back(learningRate * output_errors[i] * special_derived_sigmoid(output[i]));
 
     // Calculate hidden2->output deltas
     vector<vector<double>> weight_h2o_deltas;
@@ -300,16 +307,6 @@ void network::backpropagation(vector<double> input_array, vector<double> target_
         }
     }
 
-    // Adjust the weights by deltas
-    for (int i = 0; i < output.size(); i++) {
-        for (int j = 0; j < hidden2.size(); j++) {
-            weightsToOutput[j][i] += weight_h2o_deltas[i][j];
-        }
-    }
-    // Adjust the bias by its deltas (which is just the gradients)
-    for (int i = 0; i < biasesOfOutput.size(); i++)
-        biasesOfOutput[i] += gradients[i];
-
     // Calculate the hidden2 layer errors
     vector<double> hidden2_errors;
     hidden2_errors.resize(hidden2.size());
@@ -322,7 +319,7 @@ void network::backpropagation(vector<double> input_array, vector<double> target_
     // Calculate hidden2 gradient
     vector<double> hidden2_gradient;
     for (int i = 0; i < hidden2.size(); i++)
-        hidden2_gradient.push_back(learningRate * hidden2_errors[i] * derived_sigmoid(hidden2[i]));
+        hidden2_gradient.push_back(learningRate * hidden2_errors[i] * special_derived_sigmoid(hidden2[i]));
 
     // Calcuate hidden1->hidden2 deltas
     vector<vector<double>> weight_h1h2_deltas;
@@ -336,16 +333,6 @@ void network::backpropagation(vector<double> input_array, vector<double> target_
         }
     }
 
-    // Adjust the weights by deltas
-    for (int i = 0; i < hidden2.size(); i++) {
-        for (int j = 0; j < hidden1.size(); j++) {
-            weightsToHidden2[j][i] += weight_h1h2_deltas[i][j];
-        }
-    }
-    // Adjust the bias by its deltas (which is just the gradients)
-    for (int i = 0; i < biasesOfHidden2.size(); i++)
-        biasesOfHidden2[i] += hidden2_gradient[i];
-
     // Calculate the hidden1 layer errors
     vector<double> hidden1_errors;
     hidden1_errors.resize(hidden1.size());
@@ -358,7 +345,7 @@ void network::backpropagation(vector<double> input_array, vector<double> target_
     // Calculate hidden1 gradient
     vector<double> hidden1_gradient;
     for (int i = 0; i < hidden1.size(); i++)
-        hidden1_gradient.push_back(learningRate * hidden1_errors[i] * derived_sigmoid(hidden1[i]));
+        hidden1_gradient.push_back(learningRate * hidden1_errors[i] * special_derived_sigmoid(hidden1[i]));
 
     // Calcuate input->hidden1 deltas
     vector<vector<double>> weight_ih1_deltas;
@@ -371,6 +358,26 @@ void network::backpropagation(vector<double> input_array, vector<double> target_
             weight_ih1_deltas[i][j] = hidden1_gradient[i] * enters[j];
         }
     }
+
+    // Adjust the weights by deltas
+    for (int i = 0; i < output.size(); i++) {
+        for (int j = 0; j < hidden2.size(); j++) {
+            weightsToOutput[j][i] += weight_h2o_deltas[i][j];
+        }
+    }
+    // Adjust the bias by its deltas (which is just the gradients)
+    for (int i = 0; i < biasesOfOutput.size(); i++)
+        biasesOfOutput[i] += gradients[i];
+
+    // Adjust the weights by deltas
+    for (int i = 0; i < hidden2.size(); i++) {
+        for (int j = 0; j < hidden1.size(); j++) {
+            weightsToHidden2[j][i] += weight_h1h2_deltas[i][j];
+        }
+    }
+    // Adjust the bias by its deltas (which is just the gradients)
+    for (int i = 0; i < biasesOfHidden2.size(); i++)
+        biasesOfHidden2[i] += hidden2_gradient[i];
 
     // Adjust the weights by deltas
     for (int i = 0; i < hidden1.size(); i++) {
