@@ -60,7 +60,7 @@ public:
                     }
                 }
                 //Сохранение картинки
-                image.saveToFile(desktopPath + "\\network_data\\" + to_string(i) + ".png");
+                image.saveToFile(desktopPath + "\\network_data_test\\" + to_string(i) + ".png");
             }
             file.close();
             return result;

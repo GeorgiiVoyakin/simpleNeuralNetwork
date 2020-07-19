@@ -23,7 +23,7 @@ class network {
     bool correct = false;
     fstream weights;
     fstream biases;
-    double learningRate = 0.1;
+    double learningRate = 0.01;
     string desktopPath;
 
     enum { training, test };

@@ -58,24 +58,29 @@ network::network(vector<vector<double>>& input, string desktopPath) {
     if (load) {
         loadWeights();
         loadBiases();
+
+        feedForward();
+        makeDecision();
     }
     else {
         setWeights();
         setBiases();
     }
+
+    vector<Image> digits;
+    Image buffer_image;
+    for (int i = 0; i < 60000; i++) {
+        if (!buffer_image.loadFromFile(desktopPath + "\\network_data\\" + to_string(i) + ".png"))
+            cout << "Error. Не удалось загрузить картинку с цифрой.";
+        digits.push_back(buffer_image);
+    }
+
     cout << "Хотите начать обучение сети ? (1/0)" << endl;
     bool sure;
     cin >> sure;
     if (sure) {
-        vector<Image> digits;
-        Image buffer_image;
-        for (int i = 0; i < 60000; i++) {
-            if (!buffer_image.loadFromFile(desktopPath + "\\network_data\\" + to_string(i) + ".png"))
-                cout << "Error. Не удалось загрузить картинку с цифрой.";
-            digits.push_back(buffer_image);
-        }
         auto start = chrono::high_resolution_clock::now();
-        for (int epoch = 0; epoch < 2; epoch++) {
+        for (int epoch = 0; epoch < 3; epoch++) {
             for (int i = 0; i < 60000; i++) {
                 createInput(digits[i]);
                 feedForward();
@@ -83,7 +88,7 @@ network::network(vector<vector<double>>& input, string desktopPath) {
                 target.resize(output.size());
                 target[labels[i]] = 1.0;
                 backpropagation(output, target);
-                      
+              
                 if (i % 100 == 0)
                     cout << epoch << " " << i << endl;
             }
@@ -93,17 +98,24 @@ network::network(vector<vector<double>>& input, string desktopPath) {
         
     }
     
-    vector<Image> digits;
-    Image buffer_image;
-    for (int i = 0; i < 60000; i++) {
-        if (!buffer_image.loadFromFile(desktopPath + "\\network_data\\" + to_string(i) + ".png"))
-            cout << "Error. Не удалось загрузить картинку с цифрой.";
-        digits.push_back(buffer_image);
+    bool accuracy;
+    cout << "Do you want to check accuracy of the network: ";
+    cin >> accuracy;
+    if (accuracy) {
+        int amount = 0;
+        for (int i = 0; i < 60000; i++) {
+            createInput(digits[i]);
+            feedForward();
+            if (labels[i] == max_output()) {
+                amount++;
+            }
+
+            if (i % 100 == 0)
+                cout << i << endl;
+        }
+        cout << "Total accuracy: " << amount / 60000.0 << endl;
     }
-    createInput(digits[0]);
-    feedForward();
-    makeDecision();
-    
+
     if (!(load && !sure)) {
         cout << "Сохранить веса ? (1/0)" << endl;
         bool save;
@@ -119,19 +131,19 @@ void network::setWeights() {
     srand(static_cast<unsigned int>(time(0)));
     for (int i = 0; i < weightsToHidden1.size(); i++) {
         for (int j = 0; j < weightsToHidden1[i].size(); j++) {
-            weightsToHidden1[i][j] = (rand() % 10) * 0.1;
+            weightsToHidden1[i][j] = (rand() % 10) * 0.01;
         }
     }
 
     for (int i = 0; i < weightsToHidden2.size(); i++) {
         for (int j = 0; j < weightsToHidden2[i].size(); j++) {
-            weightsToHidden2[i][j] = (rand() % 10) * 0.1;
+            weightsToHidden2[i][j] = (rand() % 10) * 0.01;
         }
     }
 
     for (int i = 0; i < weightsToOutput.size(); i++) {
         for (int j = 0; j < weightsToOutput[i].size(); j++) {
-            weightsToOutput[i][j] = (rand() % 10) * 0.1;
+            weightsToOutput[i][j] = (rand() % 10) * 0.01;
         }
     }
 }
@@ -139,21 +151,22 @@ void network::setWeights() {
 void network::setBiases() {
     srand(static_cast<unsigned int>(time(0)));
     for (int i = 0; i < biasesOfHidden1.size(); i++)
-        biasesOfHidden1[i] = (rand() % 10) * 0.1;
+        biasesOfHidden1[i] = (rand() % 10) * 0.01;
 
     for (int i = 0; i < biasesOfHidden2.size(); i++)
-        biasesOfHidden2[i] = (rand() % 10) * 0.1;
+        biasesOfHidden2[i] = (rand() % 10) * 0.01;
 
     for (int i = 0; i < biasesOfOutput.size(); i++)
-        biasesOfOutput[i] = (rand() % 10) * 0.1;
+        biasesOfOutput[i] = (rand() % 10) * 0.01;
 }
 
 void network::countOutput(vector<double>& start, vector<double>& finish, vector<vector<double>>& sinapsW, vector<double>& biases) {
     //for weights: i - previous layer, j - next layer
-    for (int i = 0; i < start.size(); i++) {
-        for (int j = 0; j < finish.size(); j++) {
-            finish[j] += start[i] * sinapsW[i][j] + biases[j];
+    for (int i = 0; i < finish.size(); i++) {
+        for (int j = 0; j < start.size(); j++) {
+            finish[i] += start[j] * sinapsW[j][i];
         }
+        finish[i] += biases[i];
     }
     for (int i = 0; i < finish.size(); i++)
         finish[i] = sigmoid(finish[i]);
@@ -289,7 +302,8 @@ void network::backpropagation(vector<double> input_array, vector<double> target_
     vector<double> output_errors;
     for (int i = 0; i < target_array.size(); i++)
         output_errors.push_back(target_array[i] - input_array[i]);
-
+    for (auto error : output_errors)
+        error = error * error;
     // Calculate gradient
     vector<double> gradients;
     for (int i = 0; i < output.size(); i++)
