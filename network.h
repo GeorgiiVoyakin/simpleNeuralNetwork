@@ -58,8 +58,6 @@ class network {
 
     void createInput(Image digit);
 
-    void backpropagation_matrix(vector<double> input_array, vector<double> target_array);
-
     int max_output();
 public:
     network(vector<vector<double>>& input, string desktopPath);

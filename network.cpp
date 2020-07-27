@@ -5,7 +5,6 @@
 #include <string>
 #include <chrono>
 #include <SFML/Graphics.hpp>
-#include "Matrix.h"
 using namespace std;
 using namespace sf;
 
@@ -67,62 +66,67 @@ network::network(vector<vector<double>>& input, string desktopPath) {
         setBiases();
     }
 
-    vector<Image> digits;
-    Image buffer_image;
-    for (int i = 0; i < 60000; i++) {
-        if (!buffer_image.loadFromFile(desktopPath + "\\network_data\\" + to_string(i) + ".png"))
-            cout << "Error. Не удалось загрузить картинку с цифрой.";
-        digits.push_back(buffer_image);
-    }
+    bool load_images;
+    cout << "Do you want to load images";
+    cin >> load_images;
+    if (load_images) {
+        vector<Image> digits;
+        Image buffer_image;
+        for (int i = 0; i < 60000; i++) {
+            if (!buffer_image.loadFromFile(desktopPath + "\\network_data\\" + to_string(i) + ".png"))
+                cout << "Error. Не удалось загрузить картинку с цифрой.";
+            digits.push_back(buffer_image);
+        }
 
-    cout << "Хотите начать обучение сети ? (1/0)" << endl;
-    bool sure;
-    cin >> sure;
-    if (sure) {
-        auto start = chrono::high_resolution_clock::now();
-        for (int epoch = 0; epoch < 3; epoch++) {
+        cout << "Хотите начать обучение сети ? (1/0)" << endl;
+        bool sure;
+        cin >> sure;
+        if (sure) {
+            auto start = chrono::high_resolution_clock::now();
+            for (int epoch = 0; epoch < 3; epoch++) {
+                for (int i = 0; i < 60000; i++) {
+                    createInput(digits[i]);
+                    feedForward();
+                    vector<double> target;
+                    target.resize(output.size());
+                    target[labels[i]] = 1.0;
+                    backpropagation(output, target);
+
+                    if (i % 100 == 0)
+                        cout << epoch << " " << i << endl;
+                }
+            }
+            auto stop = chrono::high_resolution_clock::now();
+            cout << "Time in seconds: " << chrono::duration<double, ratio<1>>(stop - start).count() << endl;
+
+        }
+
+        bool accuracy;
+        cout << "Do you want to check accuracy of the network: ";
+        cin >> accuracy;
+        if (accuracy) {
+            int amount = 0;
             for (int i = 0; i < 60000; i++) {
                 createInput(digits[i]);
                 feedForward();
-                vector<double> target;
-                target.resize(output.size());
-                target[labels[i]] = 1.0;
-                backpropagation(output, target);
-              
+                if (labels[i] == max_output()) {
+                    amount++;
+                }
+
                 if (i % 100 == 0)
-                    cout << epoch << " " << i << endl;
+                    cout << i << endl;
             }
+            cout << "Total accuracy: " << amount / 60000.0 << endl;
         }
-        auto stop = chrono::high_resolution_clock::now();
-        cout << "Time in seconds: " << chrono::duration<double, ratio<1>>(stop - start).count() << endl;
-        
-    }
-    
-    bool accuracy;
-    cout << "Do you want to check accuracy of the network: ";
-    cin >> accuracy;
-    if (accuracy) {
-        int amount = 0;
-        for (int i = 0; i < 60000; i++) {
-            createInput(digits[i]);
-            feedForward();
-            if (labels[i] == max_output()) {
-                amount++;
+
+        if (!(load && !sure)) {
+            cout << "Сохранить веса ? (1/0)" << endl;
+            bool save;
+            cin >> save;
+            if (save) {
+                saveWeights();
+                saveBiases();
             }
-
-            if (i % 100 == 0)
-                cout << i << endl;
-        }
-        cout << "Total accuracy: " << amount / 60000.0 << endl;
-    }
-
-    if (!(load && !sure)) {
-        cout << "Сохранить веса ? (1/0)" << endl;
-        bool save;
-        cin >> save;
-        if (save) {
-            saveWeights();
-            saveBiases();
         }
     }
 }
@@ -232,7 +236,7 @@ void network::loadWeights() {
     weights.open(desktopPath + "\\weights.txt");
     while (weights >> buffer)
         W.push_back(buffer);
-    
+
     int indx = 0;
     for (int i = 0; i < weightsToHidden1.size(); i++) {
         for (int j = 0; j < weightsToHidden1[i].size(); j++) {
@@ -275,7 +279,7 @@ void network::loadBiases() {
     vector<double> B;
     double buffer;
     biases.open(desktopPath + "\\biases.txt");
-    while (biases >> buffer) 
+    while (biases >> buffer)
         B.push_back(buffer);
 
     for (int i = 0; i < biasesOfHidden1.size(); i++) {
@@ -296,7 +300,7 @@ void network::loadBiases() {
 }
 
 void network::backpropagation(vector<double> input_array, vector<double> target_array) {
-    
+
     //Вычисление ошибок выходного слоя
     // ERROR = TARGETS - OUTPUTS
     vector<double> output_errors;
@@ -422,114 +426,6 @@ void network::createInput(Image digit) {
         }
     }
     enters = input;
-}
-
-void network::backpropagation_matrix(vector<double> input_array, vector<double> target_array) {
-
-    //Вычисление ошибок выходного слоя
-    // ERROR = TARGETS - OUTPUTS
-    vector<double> output_errors;
-    for (int i = 0; i < target_array.size(); i++)
-        output_errors.push_back(target_array[i] - input_array[i]);
-
-    // Calculate gradient
-    vector<double> gradients;
-    for (int i = 0; i < output.size(); i++)
-        gradients.push_back(learningRate * output_errors[i] * derived_sigmoid(output[i]));
-
-    // Calculate hidden2->output deltas
-    vector<vector<double>> weight_h2o_deltas;
-    weight_h2o_deltas.resize(output.size());
-    for (int i = 0; i < weight_h2o_deltas.size(); i++) {
-        weight_h2o_deltas[i].resize(hidden2.size());
-    }
-    for (int i = 0; i < output.size(); i++) {
-        for (int j = 0; j < hidden2.size(); j++) {
-            weight_h2o_deltas[i][j] = gradients[i] * hidden2[j];
-        }
-    }
-
-    // Adjust the weights by deltas
-    for (int i = 0; i < output.size(); i++) {
-        for (int j = 0; j < hidden2.size(); j++) {
-            weightsToOutput[i][j] += weight_h2o_deltas[i][j];
-        }
-    }
-    // Adjust the bias by its deltas (which is just the gradients)
-    for (int i = 0; i < biasesOfOutput.size(); i++)
-        biasesOfOutput[i] += gradients[i];              //it's wright
-
-    // Calculate the hidden2 layer errors
-    vector<double> hidden2_errors;
-    hidden2_errors.resize(hidden2.size());
-    for (int i = 0; i < output.size(); i++) {
-        for (int j = 0; j < hidden2.size(); j++) {
-            hidden2_errors[j] += weightsToOutput[i][j] * output_errors[i];
-        }
-    }
-
-    // Calculate hidden2 gradient
-    vector<double> hidden2_gradient;
-    for (int i = 0; i < hidden2.size(); i++)
-        hidden2_gradient.push_back(learningRate * hidden2_errors[i] * derived_sigmoid(hidden2[i]));
-
-    // Calcuate hidden1->hidden2 deltas
-    vector<vector<double>> weight_h1h2_deltas;
-    weight_h1h2_deltas.resize(hidden2.size());
-    for (int i = 0; i < weight_h1h2_deltas.size(); i++) {
-        weight_h1h2_deltas[i].resize(hidden1.size());
-    }
-    for (int i = 0; i < hidden2.size(); i++) {
-        for (int j = 0; j < hidden1.size(); j++) {
-            weight_h1h2_deltas[i][j] = hidden2_gradient[i] * hidden1[j];
-        }
-    }
-
-    // Adjust the weights by deltas
-    for (int i = 0; i < hidden2.size(); i++) {
-        for (int j = 0; j < hidden1.size(); j++) {
-            weightsToHidden2[i][j] += weight_h1h2_deltas[i][j];
-        }
-    }
-    // Adjust the bias by its deltas (which is just the gradients)
-    for (int i = 0; i < biasesOfHidden2.size(); i++)
-        biasesOfHidden2[i] += hidden2_gradient[i];
-
-    // Calculate the hidden1 layer errors
-    vector<double> hidden1_errors;
-    hidden1_errors.resize(hidden1.size());
-    for (int i = 0; i < hidden2.size(); i++) {
-        for (int j = 0; j < hidden1.size(); j++) {
-            hidden1_errors[i] += weightsToHidden1[i][j] * hidden2_errors[i];
-        }
-    }
-
-    // Calculate hidden1 gradient
-    vector<double> hidden1_gradient;
-    for (int i = 0; i < hidden2.size(); i++)
-        hidden1_gradient.push_back(learningRate * hidden1_errors[i] * derived_sigmoid(hidden1[i]));
-
-    // Calcuate input->hidden1 deltas
-    vector<vector<double>> weight_ih1_deltas;
-    weight_ih1_deltas.resize(hidden1.size());
-    for (int i = 0; i < weight_ih1_deltas.size(); i++) {
-        weight_ih1_deltas[i].resize(enters.size());
-    }
-    for (int i = 0; i < hidden1.size(); i++) {
-        for (int j = 0; j < enters.size(); j++) {
-            weight_ih1_deltas[i][j] = hidden1_gradient[i] * enters[j];
-        }
-    }
-
-    // Adjust the weights by deltas
-    for (int i = 0; i < hidden1.size(); i++) {
-        for (int j = 0; j < enters.size(); j++) {
-            weightsToHidden1[i][j] += weight_ih1_deltas[i][j];
-        }
-    }
-    // Adjust the bias by its deltas (which is just the gradients)
-    for (int i = 0; i < biasesOfHidden1.size(); i++)
-        biasesOfHidden1[i] += hidden1_gradient[i];
 }
 
 int network::max_output() {
