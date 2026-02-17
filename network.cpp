@@ -22,21 +22,21 @@ double network::special_derived_sigmoid(double x) {
 
 network::network(vector<vector<double>>& input, string desktopPath) {
     this->desktopPath = desktopPath;
-    //Заполнение входного слоя
+    //Р—Р°РїРѕР»РЅРµРЅРёРµ РІС…РѕРґРЅРѕРіРѕ СЃР»РѕСЏ
     for (int i = 0; i < input.size(); i++) {
         for (int j = 0; j < input.size(); j++) {
             enters.push_back(input[i][j]);
         }
     }
-    //Установка размеров для всех векторов
+    //РЈСЃС‚Р°РЅРѕРІРєР° СЂР°Р·РјРµСЂРѕРІ РґР»СЏ РІСЃРµС… РІРµРєС‚РѕСЂРѕРІ
     hidden1.resize(16);
     hidden2.resize(16);
     output.resize(10);
     biasesOfHidden1.resize(hidden1.size());
     biasesOfHidden2.resize(hidden2.size());
     biasesOfOutput.resize(output.size());
-    weightsToHidden1.resize(enters.size());/*При установке размеров векторов весов сначала идёт номер нейрона,от которого идёт синапс,
-        потом - номер нейрона,к которому приходит синапс */
+    weightsToHidden1.resize(enters.size());/*РџСЂРё СѓСЃС‚Р°РЅРѕРІРєРµ СЂР°Р·РјРµСЂРѕРІ РІРµРєС‚РѕСЂРѕРІ РІРµСЃРѕРІ СЃРЅР°С‡Р°Р»Р° РёРґС‘С‚ РЅРѕРјРµСЂ РЅРµР№СЂРѕРЅР°,РѕС‚ РєРѕС‚РѕСЂРѕРіРѕ РёРґС‘С‚ СЃРёРЅР°РїСЃ,
+        РїРѕС‚РѕРј - РЅРѕРјРµСЂ РЅРµР№СЂРѕРЅР°,Рє РєРѕС‚РѕСЂРѕРјСѓ РїСЂРёС…РѕРґРёС‚ СЃРёРЅР°РїСЃ */
     for (int i = 0; i < weightsToHidden1.size(); i++) {
         weightsToHidden1[i].resize(hidden1.size());
     }
@@ -48,10 +48,10 @@ network::network(vector<vector<double>>& input, string desktopPath) {
     for (int i = 0; i < weightsToOutput.size(); i++) {
         weightsToOutput[i].resize(output.size());
     }
-    //Запись правильных ответов, которые должна давать сеть в вектор labels
+    //Р—Р°РїРёСЃСЊ РїСЂР°РІРёР»СЊРЅС‹С… РѕС‚РІРµС‚РѕРІ, РєРѕС‚РѕСЂС‹Рµ РґРѕР»Р¶РЅР° РґР°РІР°С‚СЊ СЃРµС‚СЊ РІ РІРµРєС‚РѕСЂ labels
     MNIST_reader::read_mnist_labels_in_vector(desktopPath, training, labels);
 
-    cout << "Загрузить веса ? (1/0)" << endl;
+    cout << "Р—Р°РіСЂСѓР·РёС‚СЊ РІРµСЃР° ? (1/0)" << endl;
     bool load;
     cin >> load;
     if (load) {
@@ -74,11 +74,11 @@ network::network(vector<vector<double>>& input, string desktopPath) {
         Image buffer_image;
         for (int i = 0; i < 60000; i++) {
             if (!buffer_image.loadFromFile(desktopPath + "\\network_data\\" + to_string(i) + ".png"))
-                cout << "Error. Не удалось загрузить картинку с цифрой.";
+                cout << "Error. РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РєР°СЂС‚РёРЅРєСѓ СЃ С†РёС„СЂРѕР№.";
             digits.push_back(buffer_image);
         }
 
-        cout << "Хотите начать обучение сети ? (1/0)" << endl;
+        cout << "РҐРѕС‚РёС‚Рµ РЅР°С‡Р°С‚СЊ РѕР±СѓС‡РµРЅРёРµ СЃРµС‚Рё ? (1/0)" << endl;
         bool sure;
         cin >> sure;
         if (sure) {
@@ -120,7 +120,7 @@ network::network(vector<vector<double>>& input, string desktopPath) {
         }
 
         if (!(load && !sure)) {
-            cout << "Сохранить веса ? (1/0)" << endl;
+            cout << "РЎРѕС…СЂР°РЅРёС‚СЊ РІРµСЃР° ? (1/0)" << endl;
             bool save;
             cin >> save;
             if (save) {
@@ -180,7 +180,7 @@ void network::study() {
     bool right;
     feedForward();
     makeDecision();
-    cout << "Сеть угадала число? (1/0)" << endl;
+    cout << "РЎРµС‚СЊ СѓРіР°РґР°Р»Р° С‡РёСЃР»Рѕ? (1/0)" << endl;
     cin >> right;
     if (!right) {
         setWeights();
@@ -201,7 +201,7 @@ void network::makeDecision() {
     for (int i = 0; i < output.size(); i++) {
         cout << i << ": " << output[i] << endl;
     }
-    cout << "Это цифра: " << indx << endl;
+    cout << "Р­С‚Рѕ С†РёС„СЂР°: " << indx << endl;
 }
 
 void network::feedForward() {
@@ -301,7 +301,7 @@ void network::loadBiases() {
 
 void network::backpropagation(vector<double> input_array, vector<double> target_array) {
 
-    //Вычисление ошибок выходного слоя
+    //Р’С‹С‡РёСЃР»РµРЅРёРµ РѕС€РёР±РѕРє РІС‹С…РѕРґРЅРѕРіРѕ СЃР»РѕСЏ
     // ERROR = TARGETS - OUTPUTS
     vector<double> output_errors;
     for (int i = 0; i < target_array.size(); i++)
@@ -409,7 +409,7 @@ void network::backpropagation(vector<double> input_array, vector<double> target_
 }
 
 void network::createInput(Image digit) {
-    //создание и заполнение вектора, который будет хранить входные значения нейросети
+    //СЃРѕР·РґР°РЅРёРµ Рё Р·Р°РїРѕР»РЅРµРЅРёРµ РІРµРєС‚РѕСЂР°, РєРѕС‚РѕСЂС‹Р№ Р±СѓРґРµС‚ С…СЂР°РЅРёС‚СЊ РІС…РѕРґРЅС‹Рµ Р·РЅР°С‡РµРЅРёСЏ РЅРµР№СЂРѕСЃРµС‚Рё
     vector<vector<Color>> colors(28, vector<Color>(28));
     for (unsigned int i = 0; i < 28; i++)
     {
@@ -417,7 +417,7 @@ void network::createInput(Image digit) {
             colors[i][j] = digit.getPixel(i, j);
         }
     }
-    //Подготовка входных значений
+    //РџРѕРґРіРѕС‚РѕРІРєР° РІС…РѕРґРЅС‹С… Р·РЅР°С‡РµРЅРёР№
     vector<double> input;
     for (unsigned int i = 0; i < 28; i++)
     {

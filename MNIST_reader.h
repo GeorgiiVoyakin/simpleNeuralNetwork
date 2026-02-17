@@ -42,7 +42,7 @@ public:
             file.read((char*)&n_cols, sizeof(n_cols));
             n_cols = reverseInt(n_cols);
             Image image;
-            image.loadFromFile(desktopPath + "\\image.png");//Загрузка пустого изображения
+            image.loadFromFile(desktopPath + "\\image.png");//Р—Р°РіСЂСѓР·РєР° РїСѓСЃС‚РѕРіРѕ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
 
             unsigned char temp;
             for (int i = 0; i < number_of_images; ++i) {
@@ -51,7 +51,7 @@ public:
                         if (!file.read((char*)&temp, sizeof(temp)))
                             exit(1);
 
-                        //i - номер цифры
+                        //i - РЅРѕРјРµСЂ С†РёС„СЂС‹
                         if (i == number) {
                             result.push_back(static_cast<int>(temp));
                         }
@@ -59,7 +59,7 @@ public:
                         image.setPixel(c, r, color);
                     }
                 }
-                //Сохранение картинки
+                //РЎРѕС…СЂР°РЅРµРЅРёРµ РєР°СЂС‚РёРЅРєРё
                 image.saveToFile(desktopPath + "\\network_data_test\\" + to_string(i) + ".png");
             }
             file.close();
